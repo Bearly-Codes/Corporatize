@@ -1,32 +1,241 @@
 <!doctype html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CorpSpeak-ifier</title></head>
-<body style="max-width:800px;margin:2rem auto;font-family:system-ui">
-  <h1>CorpSpeak-ifier</h1>
-  <input id="subject" placeholder="Subject (optional)" style="width:100%;padding:.5rem">
-  <textarea id="body" rows="10" placeholder="Paste your spicy email…" style="width:100%;margin-top:.5rem;padding:.5rem"></textarea>
-  <button id="btn" style="margin-top:.75rem;padding:.5rem 1rem">Professionalize</button>
-  <pre id="out" style="white-space:pre-wrap;background:#f6f6f6;padding:1rem;margin-top:1rem;border-radius:.5rem"></pre>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>CorpSpeak-ifier — Corporatize</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #0f1115;
+      --card: #151922;
+      --card2: #0f1420;
+      --text: #eaeefb;
+      --muted: #a8b0c2;
+      --accent: #7aa2ff;
+      --border: #232a3a;
+      --green: #21c07a;
+      --red: #ff6b6b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 2rem;
+      background: var(--bg); color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      display: grid; place-items: start center; min-height: 100dvh;
+    }
+    .wrap { width: min(900px, 95vw); }
 
-<script>
-const API = location.origin; // same host
-document.getElementById('btn').onclick = async () => {
-  const subject = document.getElementById('subject').value;
-  const body = document.getElementById('body').value;
-  const out = document.getElementById('out');
-  out.textContent = "Working…";
-  const res = await fetch(`${API}/professionalize`, {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({subject, body})
-  });
-  const data = await res.json();
-  if (data.error) {
-    out.textContent = "Error: " + data.error;
-  } else {
-    out.textContent = "Subject: " + data.subject + "\n\n" + data.body;
-  }
-};
-</script>
+    .window {
+      border: 1px solid var(--border);
+      border-radius: 14px; overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+      background: linear-gradient(180deg, var(--card) 0%, var(--card2) 100%);
+    }
+    .titlebar {
+      display: flex; align-items: center; gap: .5rem;
+      padding: .75rem 1rem; border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.02);
+    }
+    .dots { display: flex; gap: .5rem; margin-right: .5rem; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dot.red { background: #ff5f57; }
+    .dot.yellow { background: #febc2e; }
+    .dot.green { background: #28c840; }
+    .title { font-weight: 600; color: var(--muted); }
+
+    .toolbar {
+      display: flex; align-items: center; gap: .5rem;
+      padding: .6rem 1rem; border-bottom: 1px solid var(--border);
+    }
+    .pill {
+      background: #1b2232; color: var(--muted); border: 1px solid var(--border);
+      border-radius: 999px; padding: .35rem .7rem; font-size: .9rem;
+    }
+
+    .form { padding: 1rem; display: grid; gap: .75rem; }
+    .row { display: grid; grid-template-columns: 90px 1fr; gap: .75rem; align-items: center; }
+    label { color: var(--muted); }
+    input[type="text"], textarea {
+      width: 100%; padding: .65rem .75rem; border-radius: 10px;
+      border: 1px solid var(--border); background: #0e1421; color: var(--text);
+      outline: none; font-size: 1rem;
+    }
+    textarea { min-height: 220px; resize: vertical; line-height: 1.5; }
+
+    .actions {
+      display: flex; justify-content: space-between; align-items: center; margin-top: .25rem;
+    }
+    .btn {
+      appearance: none; border: 1px solid var(--border); background: #1b2334;
+      color: var(--text); padding: .65rem 1rem; border-radius: 10px; font-weight: 600;
+      cursor: pointer; transition: transform .06s ease, opacity .2s ease;
+    }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .btn.primary { border-color: #3a4a6a; background: #223055; }
+    .btn.primary:hover:not(:disabled) { transform: translateY(-1px); }
+    .hint {
+      color: var(--accent);
+      font-size: 1rem;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      background: rgba(122,162,255,0.08);
+      padding: .25rem .7rem;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(122,162,255,0.07);
+      transition: background 0.2s;
+      display: inline-block;
+    }
+
+    .result {
+      border-top: 1px solid var(--border); margin-top: .75rem; padding-top: .75rem;
+      display: none; /* shown after response */
+    }
+    .result h3 { margin: .3rem 0 .5rem; }
+    .result .box {
+      border: 1px solid var(--border); border-radius: 10px; padding: .75rem; background: #0e1421;
+      white-space: pre-wrap;
+    }
+    .tag { font-size: .8rem; color: var(--muted); }
+    .ok { color: var(--green); }
+    .err { color: var(--red); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="window">
+      <div class="titlebar">
+        <div class="dots">
+          <div class="dot red"></div>
+          <div class="dot yellow"></div>
+          <div class="dot green"></div>
+        </div>
+        <div class="title">Email</div>
+      </div>
+
+      <div class="toolbar">
+        <span class="pill">From: you@example.com</span>
+      </div>
+
+      <form class="form" id="form" onsubmit="return false;">
+        <div class="row">
+          <label for="to">To</label>
+          <input type="text" id="to" placeholder="rick@company.com" autocomplete="off" />
+        </div>
+
+        <div class="row">
+          <label for="subject">Subject</label>
+          <input type="text" id="subject" placeholder="(optional) e.g., Constructive feedback on Q3 deliverables" autocomplete="off" />
+        </div>
+
+        <div class="row">
+          <label for="body">Body</label>
+          <textarea id="body" placeholder="Paste your spicy email here… The Corporatize button will translate it into aggressively polite corporate prose."></textarea>
+        </div>
+
+        <div class="actions">
+          <div class="hint" id="status">Ready.</div>
+          <button class="btn primary" id="sendBtn" disabled>Corporatize ✉️</button>
+        </div>
+
+        <div class="result" id="result">
+          <div class="tag" id="tag"></div>
+          <h3 id="rSubject"></h3>
+          <div class="box" id="rBody"></div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const sendBtn = document.getElementById('sendBtn');
+    const statusEl = document.getElementById('status');
+    const toEl = document.getElementById('to');
+    const subjectEl = document.getElementById('subject');
+    const bodyEl = document.getElementById('body');
+    const resultEl = document.getElementById('result');
+    const rSubjectEl = document.getElementById('rSubject');
+    const rBodyEl = document.getElementById('rBody');
+    const tagEl = document.getElementById('tag');
+
+    let mode = 'send'; // 'send' | 'reset'
+
+    // Disable button if body is blank
+    function updateButtonState() {
+      const hasText = bodyEl.value.trim().length > 0;
+      sendBtn.disabled = !hasText;
+    }
+
+    bodyEl.addEventListener('input', updateButtonState);
+    updateButtonState();
+
+    async function corporatize() {
+      statusEl.textContent = 'Corporatizing…';
+      sendBtn.disabled = true;
+
+      try {
+        const res = await fetch('/professionalize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subject: subjectEl.value || '',
+            body: bodyEl.value || ''
+          })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || data.error) {
+          tagEl.innerHTML = `<span class="err">Error</span>`;
+          rSubjectEl.textContent = '';
+          rBodyEl.textContent = data.error || ('HTTP ' + res.status);
+          resultEl.style.display = 'block';
+          statusEl.textContent = 'Something went wrong.';
+        } else {
+          tagEl.innerHTML = `<span class="ok">Corporatized</span>`;
+          rSubjectEl.textContent = data.subject || '(no subject)';
+          rBodyEl.textContent = data.body || '';
+          resultEl.style.display = 'block';
+          statusEl.textContent = 'Done.';
+        }
+
+        // Switch button to "Start over"
+        mode = 'reset';
+        sendBtn.textContent = 'Start over ↺';
+        sendBtn.disabled = false;
+
+      } catch (e) {
+        tagEl.innerHTML = `<span class="err">Error</span>`;
+        rSubjectEl.textContent = '';
+        rBodyEl.textContent = e.message || String(e);
+        resultEl.style.display = 'block';
+        statusEl.textContent = 'Network error.';
+        mode = 'reset';
+        sendBtn.textContent = 'Start over ↺';
+        sendBtn.disabled = false;
+      }
+    }
+
+    function resetForm() {
+      toEl.value = '';
+      subjectEl.value = '';
+      bodyEl.value = '';
+      resultEl.style.display = 'none';
+      tagEl.textContent = '';
+      rSubjectEl.textContent = '';
+      rBodyEl.textContent = '';
+      statusEl.textContent = 'Ready.';
+      mode = 'send';
+      sendBtn.textContent = 'Corporatize ✉️';
+      updateButtonState();
+    }
+
+    sendBtn.addEventListener('click', async () => {
+      if (mode === 'send') {
+        await corporatize();
+      } else {
+        resetForm();
+      }
+    });
+  </script>
 </body>
 </html>

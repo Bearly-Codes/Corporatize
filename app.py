@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from google import genai
 from google.genai import types
@@ -22,8 +23,9 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-app.mount("/static", StaticFiles(directory="static", html=True), name="static")
-
+if(not os.getenv("GEMINI_API_KEY")):
+    print("GEMINI_API_KEY not set")
+    exit(1)
 
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
@@ -60,7 +62,7 @@ def professionalize(req: Req):
             "error": "Input text is empty"
         }
 
-    if len(body) > MAX_LENGTHS["body"] or len(subject) > MAX_LENGTHS["subject"]:
+    if len(req.body) > MAX_LENGTHS["body"] or len(req.subject) > MAX_LENGTHS["subject"]:
         return {
             "subject": "",
             "body": "",
@@ -113,3 +115,5 @@ def professionalize(req: Req):
             "error": "EXCEPTION GENERATED: " + 
             str(e)
         }
+
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
