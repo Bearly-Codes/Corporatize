@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CorpSpeak-ifier</title></head>
+<body style="max-width:800px;margin:2rem auto;font-family:system-ui">
+  <h1>CorpSpeak-ifier</h1>
+  <input id="subject" placeholder="Subject (optional)" style="width:100%;padding:.5rem">
+  <textarea id="body" rows="10" placeholder="Paste your spicy email…" style="width:100%;margin-top:.5rem;padding:.5rem"></textarea>
+  <button id="btn" style="margin-top:.75rem;padding:.5rem 1rem">Professionalize</button>
+  <pre id="out" style="white-space:pre-wrap;background:#f6f6f6;padding:1rem;margin-top:1rem;border-radius:.5rem"></pre>
+
+<script>
+const API = location.origin; // same host
+document.getElementById('btn').onclick = async () => {
+  const subject = document.getElementById('subject').value;
+  const body = document.getElementById('body').value;
+  const out = document.getElementById('out');
+  out.textContent = "Working…";
+  const res = await fetch(`${API}/professionalize`, {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({subject, body})
+  });
+  const data = await res.json();
+  if (data.error) {
+    out.textContent = "Error: " + data.error;
+  } else {
+    out.textContent = "Subject: " + data.subject + "\n\n" + data.body;
+  }
+};
+</script>
+</body>
+</html>
